@@ -26,6 +26,9 @@ vars:
     sh: git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD
   GHUSER:
     sh: echo "${GITHUB_USER:-apache}"
+  WORKSPACE_ROOT:
+    sh: git rev-parse --show-superproject-working-tree 2>/dev/null || git rev-parse --show-toplevel
+  BUILD_CONTAINER_IMAGE: openserverless-build-devcontainer:local
   DOCKER_REGISTRY: registry.hub.docker.com/apache
   DIST_DOCKER_REGISTRY: ""
   DIST_DOCKER_REGISTRY_ARG:
@@ -286,6 +289,24 @@ tasks:
          ACT: "buildx-push"
 
   distdocker:
+    cmds:
+    - |
+      if test "${OPENWHISK_BUILDCONTAINER:-}" = "1"; then
+        task distdocker:local
+      else
+        if ! docker image inspect "{{.BUILD_CONTAINER_IMAGE}}" >/dev/null 2>&1; then
+          docker build -t "{{.BUILD_CONTAINER_IMAGE}}" .devcontainer
+        fi
+        docker run --rm --entrypoint bash \
+          -e OPENWHISK_BUILDCONTAINER=1 \
+          -v "{{.WORKSPACE_ROOT}}:/workspace" \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -w /workspace/build \
+          "{{.BUILD_CONTAINER_IMAGE}}" \
+          -lc 'git config --global --add safe.directory /workspace && git config --global --add safe.directory /workspace/build && git config --global --add safe.directory /workspace/build/openwhisk && task distdocker:local'
+      fi
+
+  distdocker:local:
     dir: openwhisk
     cmds:
     - ./gradlew distDocker -PdockerMultiArchBuild=true {{.DIST_DOCKER_REGISTRY_ARG}} -PdockerImagePrefix=openwhisk2 -PdockerImageTag={{.TAG}}
