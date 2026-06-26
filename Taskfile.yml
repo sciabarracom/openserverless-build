@@ -27,6 +27,12 @@ vars:
   GHUSER:
     sh: echo "${GITHUB_USER:-apache}"
   DOCKER_REGISTRY: registry.hub.docker.com/apache
+  DIST_DOCKER_REGISTRY: ""
+  DIST_DOCKER_REGISTRY_ARG:
+    sh: |
+      if test -n "{{.DIST_DOCKER_REGISTRY}}"; then
+        echo "-PdockerRegistry={{.DIST_DOCKER_REGISTRY}}"
+      fi
   CONTROLLER_IMAGE: openserverless-wsk-controller
   INVOKER_IMAGE: openserverless-wsk-invoker
   SCHEDULER_IMAGE: openserverless-wsk-scheduler
@@ -282,7 +288,7 @@ tasks:
   distdocker:
     dir: openwhisk
     cmds:
-    - ./gradlew distDocker -PdockerMultiArchBuild=true -PdockerRegistry={{.DOCKER_REGISTRY}} -PdockerImagePrefix=openwhisk2 -PdockerImageTag={{.TAG}}
+    - ./gradlew distDocker -PdockerMultiArchBuild=true {{.DIST_DOCKER_REGISTRY_ARG}} -PdockerImagePrefix=openwhisk2 -PdockerImageTag={{.TAG}}
 
   run:standalone-docker:
     cmds:
