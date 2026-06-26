@@ -43,9 +43,10 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python ;\
     python get-pip.py ;\
     python -m pip install docker==5.0.0 ansible==2.8.18 jinja2==3.0.1 couchdb==1.2 httplib2==0.19.1 requests==2.25.1 six==1.16.0 flake8
 # docker
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu bionic stable" > /etc/apt/sources.list.d/docker.list ;\
+RUN . /etc/os-release ;\
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list ;\
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor > /usr/share/keyrings/docker-archive-keyring.gpg ;\
-    apt-get update && apt-get -y install docker-ce-cli 
+    apt-get update && apt-get -y install docker-ce-cli docker-buildx-plugin
 # protobuf setup
 RUN apt-get -y install protobuf-compiler
 
@@ -84,6 +85,24 @@ RUN update-alternatives --install /usr/bin/javac javac $GRAALVM_HOME/bin/javac 1
 # Verify GraalVM and Native Image installation
 RUN java -version
 RUN native-image --version
+
+# OpenWhisk distDocker is built with JDK 11 in this branch. Keep GraalVM
+# available for native-image, but make Temurin 11 the default Java toolchain.
+ENV JAVA11_HOME=/opt/jdk-11
+RUN set -eux; \
+    case "$TARGETPLATFORM" in \
+      linux/amd64) JDK_URL="https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.17%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.17_8.tar.gz" ;; \
+      linux/arm64) JDK_URL="https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.17%2B8/OpenJDK11U-jdk_aarch64_linux_hotspot_11.0.17_8.tar.gz" ;; \
+      *) echo "Unsupported platform: $TARGETPLATFORM" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL "$JDK_URL" | tar xz -C /opt; \
+    mv /opt/jdk-11.0.17+8 "$JAVA11_HOME"; \
+    update-alternatives --install /usr/bin/java java "$JAVA11_HOME/bin/java" 2; \
+    update-alternatives --install /usr/bin/javac javac "$JAVA11_HOME/bin/javac" 2
+
+ENV JAVA_HOME=$JAVA11_HOME
+ENV PATH=$JAVA_HOME/bin:$GRAALVM_HOME/bin:$PATH
+RUN java -version && javac -version && native-image --version
     
 RUN useradd -m openserverless -s /bin/bash ;\
     echo "openserverless ALL=(ALL:ALL) NOPASSWD: ALL" >>/etc/sudoers
