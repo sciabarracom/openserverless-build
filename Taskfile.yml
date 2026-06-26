@@ -170,7 +170,7 @@ tasks:
       echo "***" {{.ACT}} for {{.IMG}} in {{.DIR}}
       case "{{.ACT}}" in
       (build)
-      docker build {{.DIR}} -t {{.IMG}} --build-arg BASE={{.BASE}} --push
+      docker build {{.DIR}} -t {{.IMG}} --build-arg BASE={{.BASE}}
       ;;
       (buildx) 
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}}
@@ -189,7 +189,7 @@ tasks:
       echo "***" {{.ACT}} for {{.IMG}} in {{.DIR}}
       case "{{.ACT}}" in
       (build)
-      docker build {{.DIR}} -t {{.IMG}} --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} --push
+      docker build {{.DIR}} -t {{.IMG}} --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}}
       ;;
       (buildx) 
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} -t {{.IMG}} {{.DIR}}
@@ -251,9 +251,27 @@ tasks:
           IMG: "{{.DOCKER_REGISTRY}}/${MY_STANDALONE_IMAGE:-{{.STANDALONE_IMAGE}}}:{{.TAG}}"
           ACT: '{{.ACT}}'
           BASE: "{{.DOCKER_REGISTRY}}/{{.COMMON_IMAGE}}:{{.TAG}}"
-          OPENWHISK_JAR: "build/libs/openwhisk-standalone-1.0.1-SNAPSHOT.jar"
+          OPENWHISK_JAR: "build/libs/openwhisk-standalone-1.0.0-SNAPSHOT.jar"
   
   build-all:
+    cmds:
+    - |
+      if test "${OPENWHISK_BUILDCONTAINER:-}" = "1"; then
+        task build-all:local
+      else
+        if ! docker image inspect "{{.BUILD_CONTAINER_IMAGE}}" >/dev/null 2>&1; then
+          docker build -t "{{.BUILD_CONTAINER_IMAGE}}" .devcontainer
+        fi
+        docker run --rm --entrypoint bash \
+          -e OPENWHISK_BUILDCONTAINER=1 \
+          -v "{{.WORKSPACE_ROOT}}:/workspace" \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -w /workspace/build \
+          "{{.BUILD_CONTAINER_IMAGE}}" \
+          -lc 'git config --global --add safe.directory /workspace && git config --global --add safe.directory /workspace/build && git config --global --add safe.directory /workspace/build/openwhisk && task build-all:local'
+      fi
+
+  build-all:local:
     cmds:
     - task: build:scala
       vars:
