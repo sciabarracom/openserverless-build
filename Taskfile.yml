@@ -29,6 +29,27 @@ vars:
   WORKSPACE_ROOT:
     sh: git rev-parse --show-superproject-working-tree 2>/dev/null || git rev-parse --show-toplevel
   BUILD_CONTAINER_IMAGE: openserverless-build-devcontainer:local
+  BUN:
+    sh: |
+      if command -v bun >/dev/null 2>&1; then
+        command -v bun
+        exit 0
+      fi
+      os="$(uname -s | tr A-Z a-z)"
+      arch="$(uname -m)"
+      case "$arch" in
+        x86_64) arch=amd64 ;;
+        aarch64|arm64) arch=arm64 ;;
+      esac
+      if test -x "$HOME/.ops/${os}-${arch}/bin/bun"; then
+        echo "$HOME/.ops/${os}-${arch}/bin/bun"
+      else
+        echo bun
+      fi
+  OPSROOT_JSON:
+    sh: echo "$HOME/.ops/0.1.0/olaris/opsroot.json"
+  KIND_NODE: nuvolaris-control-plane
+  KUBE_NAMESPACE: nuvolaris
   DOCKER_REGISTRY: registry.hub.docker.com/apache
   DIST_DOCKER_REGISTRY: ""
   DIST_DOCKER_REGISTRY_ARG:
@@ -288,6 +309,81 @@ tasks:
     - task: build:standalone
       vars:
          ACT: "build"
+
+  deploy-kind-local:
+    desc: build local OpenWhisk images, update OPS root, load kind, and roll out controller
+    deps:
+    - build-all
+    cmds:
+    - task: kind:deploy
+
+  opsroot:update:
+    desc: update installed OPS root with local OpenWhisk image tags
+    silent: true
+    cmds:
+    - "{{.BUN}} scripts/kind-local.ts update-opsroot"
+    env:
+      TAG: "{{.TAG}}"
+      DOCKER_REGISTRY: "{{.DOCKER_REGISTRY}}"
+      CONTROLLER_IMAGE: "{{.CONTROLLER_IMAGE}}"
+      INVOKER_IMAGE: "{{.INVOKER_IMAGE}}"
+      STANDALONE_IMAGE: "{{.STANDALONE_IMAGE}}"
+      OPSROOT_JSON: "{{.OPSROOT_JSON}}"
+
+  kind:load:
+    desc: load local OpenWhisk images into the kind node
+    silent: true
+    cmds:
+    - "{{.BUN}} scripts/kind-local.ts load-kind"
+    env:
+      TAG: "{{.TAG}}"
+      DOCKER_REGISTRY: "{{.DOCKER_REGISTRY}}"
+      CONTROLLER_IMAGE: "{{.CONTROLLER_IMAGE}}"
+      INVOKER_IMAGE: "{{.INVOKER_IMAGE}}"
+      STANDALONE_IMAGE: "{{.STANDALONE_IMAGE}}"
+      KIND_NODE: "{{.KIND_NODE}}"
+
+  kind:rollout:
+    desc: update local kind OpenWhisk workloads to the local images
+    silent: true
+    cmds:
+    - "{{.BUN}} scripts/kind-local.ts rollout"
+    env:
+      TAG: "{{.TAG}}"
+      DOCKER_REGISTRY: "{{.DOCKER_REGISTRY}}"
+      CONTROLLER_IMAGE: "{{.CONTROLLER_IMAGE}}"
+      INVOKER_IMAGE: "{{.INVOKER_IMAGE}}"
+      STANDALONE_IMAGE: "{{.STANDALONE_IMAGE}}"
+      KUBE_NAMESPACE: "{{.KUBE_NAMESPACE}}"
+
+  kind:status:
+    desc: show local image, kind image, and pod image status
+    silent: true
+    cmds:
+    - "{{.BUN}} scripts/kind-local.ts status"
+    env:
+      TAG: "{{.TAG}}"
+      DOCKER_REGISTRY: "{{.DOCKER_REGISTRY}}"
+      CONTROLLER_IMAGE: "{{.CONTROLLER_IMAGE}}"
+      INVOKER_IMAGE: "{{.INVOKER_IMAGE}}"
+      STANDALONE_IMAGE: "{{.STANDALONE_IMAGE}}"
+      KIND_NODE: "{{.KIND_NODE}}"
+      KUBE_NAMESPACE: "{{.KUBE_NAMESPACE}}"
+
+  kind:deploy:
+    desc: update OPS root, load local images into kind, and roll out OpenWhisk
+    silent: true
+    cmds:
+    - "{{.BUN}} scripts/kind-local.ts deploy-kind"
+    env:
+      TAG: "{{.TAG}}"
+      DOCKER_REGISTRY: "{{.DOCKER_REGISTRY}}"
+      CONTROLLER_IMAGE: "{{.CONTROLLER_IMAGE}}"
+      INVOKER_IMAGE: "{{.INVOKER_IMAGE}}"
+      STANDALONE_IMAGE: "{{.STANDALONE_IMAGE}}"
+      OPSROOT_JSON: "{{.OPSROOT_JSON}}"
+      KIND_NODE: "{{.KIND_NODE}}"
+      KUBE_NAMESPACE: "{{.KUBE_NAMESPACE}}"
 
   buildx-and-push:
     - task: build:scala
