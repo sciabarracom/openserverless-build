@@ -310,6 +310,11 @@ tasks:
       vars:
          ACT: "build"
 
+  build:
+    desc: build local OpenWhisk images, update OPS root, load kind, and roll out controller
+    cmds:
+    - task: deploy-kind-local
+
   deploy-kind-local:
     desc: build local OpenWhisk images, update OPS root, load kind, and roll out controller
     deps:
