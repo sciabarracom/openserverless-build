@@ -69,6 +69,7 @@ tasks:
 
   default:
     - task --list-all
+  
   setup: 
     silent: true
 
