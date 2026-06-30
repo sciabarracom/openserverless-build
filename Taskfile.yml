@@ -80,9 +80,9 @@ tasks:
     cmds:
       - |
         if ! test -d openwhisk/common/scala; then
-          echo "ERROR: openwhisk submodule is not initialized."
-          echo "Run from the OpenServerless root: git submodule update --init --recursive build"
-          echo "Or, from this build checkout: git submodule update --init --recursive openwhisk"
+          echo "ERROR: openwhisk directory is missing or incomplete."
+          echo "This branch vendors openwhisk as a regular directory, not as a submodule."
+          echo "Refresh the build checkout and make sure the build-local branch includes openwhisk/common/scala."
           exit 1
         fi
 
