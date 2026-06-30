@@ -23,12 +23,14 @@ dotenv:
 vars:
   BASETAG: 2.0.0-incubating
   TAG:
-    sh: git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD
+    sh: |
+      if test -n "${TAG:-}"; then
+        echo "$TAG"
+      else
+        git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD
+      fi
   GHUSER:
     sh: echo "${GITHUB_USER:-apache}"
-  WORKSPACE_ROOT:
-    sh: git rev-parse --show-superproject-working-tree 2>/dev/null || git rev-parse --show-toplevel
-  BUILD_CONTAINER_IMAGE: openserverless-build-devcontainer:local
   BUN:
     sh: |
       if command -v bun >/dev/null 2>&1; then
@@ -72,6 +74,17 @@ tasks:
   
   setup: 
     silent: true
+
+  ensure-openwhisk:
+    silent: true
+    cmds:
+      - |
+        if ! test -d openwhisk/common/scala; then
+          echo "ERROR: openwhisk submodule is not initialized."
+          echo "Run from the OpenServerless root: git submodule update --init --recursive build"
+          echo "Or, from this build checkout: git submodule update --init --recursive openwhisk"
+          exit 1
+        fi
 
   image-tag:
     - git tag -d $(git tag)
@@ -281,20 +294,12 @@ tasks:
       if test "${OPENWHISK_BUILDCONTAINER:-}" = "1"; then
         task build-all:local
       else
-        if ! docker image inspect "{{.BUILD_CONTAINER_IMAGE}}" >/dev/null 2>&1; then
-          docker build -t "{{.BUILD_CONTAINER_IMAGE}}" .devcontainer
-        fi
-        docker run --rm --entrypoint bash \
-          -e OPENWHISK_BUILDCONTAINER=1 \
-          -v "{{.WORKSPACE_ROOT}}:/workspace" \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -w /workspace/build \
-          "{{.BUILD_CONTAINER_IMAGE}}" \
-          -lc 'git config --global --add safe.directory /workspace && git config --global --add safe.directory /workspace/build && git config --global --add safe.directory /workspace/build/openwhisk && task build-all:local'
+        printf '%s\n' 'mkdir -p /tmp/openserverless-docker-config && printf "{}\n" >/tmp/openserverless-docker-config/config.json && OPENWHISK_BUILDCONTAINER=1 DOCKER_CONFIG=/tmp/openserverless-docker-config TAG="{{.TAG}}" task build-all:local' | ops ide devcontainer
       fi
 
   build-all:local:
     cmds:
+    - task: ensure-openwhisk
     - task: build:scala
       vars:
          ACT: "build" 
@@ -414,19 +419,12 @@ tasks:
       if test "${OPENWHISK_BUILDCONTAINER:-}" = "1"; then
         task distdocker:local
       else
-        if ! docker image inspect "{{.BUILD_CONTAINER_IMAGE}}" >/dev/null 2>&1; then
-          docker build -t "{{.BUILD_CONTAINER_IMAGE}}" .devcontainer
-        fi
-        docker run --rm --entrypoint bash \
-          -e OPENWHISK_BUILDCONTAINER=1 \
-          -v "{{.WORKSPACE_ROOT}}:/workspace" \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -w /workspace/build \
-          "{{.BUILD_CONTAINER_IMAGE}}" \
-          -lc 'git config --global --add safe.directory /workspace && git config --global --add safe.directory /workspace/build && git config --global --add safe.directory /workspace/build/openwhisk && task distdocker:local'
+        printf '%s\n' 'mkdir -p /tmp/openserverless-docker-config && printf "{}\n" >/tmp/openserverless-docker-config/config.json && OPENWHISK_BUILDCONTAINER=1 DOCKER_CONFIG=/tmp/openserverless-docker-config TAG="{{.TAG}}" task distdocker:local' | ops ide devcontainer
       fi
 
   distdocker:local:
+    deps:
+    - ensure-openwhisk
     dir: openwhisk
     cmds:
     - ./gradlew distDocker -PdockerMultiArchBuild=true {{.DIST_DOCKER_REGISTRY_ARG}} -PdockerImagePrefix=openwhisk2 -PdockerImageTag={{.TAG}}
