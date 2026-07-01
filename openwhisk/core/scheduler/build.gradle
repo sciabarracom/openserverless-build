@@ -22,6 +22,19 @@ apply plugin: 'maven'
 apply plugin: 'org.scoverage'
 apply plugin: 'com.lightbend.akka.grpc.gradle'
 
+def buildArch = System.getProperty("os.arch")
+if (buildArch == "aarch64" || buildArch == "arm64") {
+    def protocPath = ["/usr/bin/protoc", "/usr/local/bin/protoc"].find { file(it).exists() }
+    if (!protocPath) {
+        throw new GradleException("ARM builds need protoc installed in the build environment")
+    }
+    protobuf {
+        protoc {
+            path = protocPath
+        }
+    }
+}
+
 ext.dockerImageName = 'scheduler'
 apply from: '../../gradle/docker.gradle'
 distDocker.dependsOn ':common:scala:distDocker', 'distTar'
