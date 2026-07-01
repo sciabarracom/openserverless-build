@@ -190,9 +190,10 @@ tasks:
     - task: compile:standalone
 
   docker-setup:
-    - docker run -it --rm --userns=host --privileged tonistiigi/binfmt --install all
-    - docker buildx create --name openserverless
+    - docker run --rm --privileged tonistiigi/binfmt --install all
+    - docker buildx inspect openserverless >/dev/null 2>&1 || docker buildx create --name openserverless --driver docker-container
     - docker buildx use openserverless
+    - docker buildx inspect --bootstrap
 
   docker-login: >
     echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USER --password-stdin
@@ -328,6 +329,7 @@ tasks:
 
   buildx-all:local:
     cmds:
+    - task: docker-setup
     - task: ensure-openwhisk
     - task: build:scala
       vars:
@@ -426,6 +428,7 @@ tasks:
       KUBE_NAMESPACE: "{{.KUBE_NAMESPACE}}"
 
   buildx-and-push:
+    - task: docker-setup
     - task: build:scala
       vars:
          ACT: "buildx-push" 
