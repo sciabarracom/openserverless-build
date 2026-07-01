@@ -53,6 +53,11 @@ vars:
   KIND_NODE: nuvolaris-control-plane
   KUBE_NAMESPACE: nuvolaris
   DOCKER_REGISTRY: registry.hub.docker.com/apache
+  LOCAL_DOCKER_REGISTRY:
+    sh: echo "${LOCAL_DOCKER_REGISTRY:-localhost:5000/apache}"
+  LOCAL_REGISTRY_CONTAINER:
+    sh: echo "${LOCAL_REGISTRY_CONTAINER:-openserverless-registry}"
+  BUILDX_BUILDER: openserverless-buildx
   DIST_DOCKER_REGISTRY: ""
   DIST_DOCKER_REGISTRY_ARG:
     sh: |
@@ -181,7 +186,7 @@ tasks:
     - rm openwhisk/core/invoker/build/distributions/invoker.tar
     - rm openwhisk/core/controller/build/distributions/controller.tar
     - rm openwhisk/core/scheduler/build/distributions/scheduler.tar
-    - docker buildx rm openserverless
+    - docker buildx rm {{.BUILDX_BUILDER}}
 
   compile:
     - task: compile:controller
@@ -191,9 +196,19 @@ tasks:
 
   docker-setup:
     - docker run --rm --privileged tonistiigi/binfmt --install all
-    - docker buildx inspect openserverless >/dev/null 2>&1 || docker buildx create --name openserverless --driver docker-container
-    - docker buildx use openserverless
+    - docker buildx inspect {{.BUILDX_BUILDER}} >/dev/null 2>&1 || docker buildx create --name {{.BUILDX_BUILDER}} --driver docker-container --driver-opt network=host
+    - docker buildx use {{.BUILDX_BUILDER}}
     - docker buildx inspect --bootstrap
+
+  docker-local-registry:
+    silent: true
+    cmds:
+    - |
+      if docker container inspect {{.LOCAL_REGISTRY_CONTAINER}} >/dev/null 2>&1; then
+        docker start {{.LOCAL_REGISTRY_CONTAINER}} >/dev/null
+      else
+        docker run -d --restart=always -p 5000:5000 --name {{.LOCAL_REGISTRY_CONTAINER}} registry:2 >/dev/null
+      fi
 
   docker-login: >
     echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USER --password-stdin
@@ -211,10 +226,13 @@ tasks:
       (buildx) 
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}}
       ;;
+      (buildx-local)
+      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}} --push
+      ;;
       (buildx-push) 
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}} --push 
       ;;
-      (*) echo ACT must be "build|buildx|buildx-push"
+      (*) echo ACT must be "build|buildx|buildx-local|buildx-push"
       esac
 
   # this requires ACT IMG OPENWHISK_JAR and DIR parameters to be passed 
@@ -230,10 +248,13 @@ tasks:
       (buildx) 
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} -t {{.IMG}} {{.DIR}}
       ;;
+      (buildx-local)
+      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} -t {{.IMG}} {{.DIR}} --push
+      ;;
       (buildx-push) 
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} -t {{.IMG}} {{.DIR}} --push 
       ;;
-      (*) echo ACT must be "build|buildx|buildx-push"
+      (*) echo ACT must be "build|buildx|buildx-local|buildx-push"
       esac      
 
   build:scala:
@@ -318,7 +339,7 @@ tasks:
          ACT: "build"
 
   buildx-all:
-    desc: build multi-arch OpenWhisk images without pushing
+    desc: build multi-arch OpenWhisk images into a local registry without pushing to DockerHub
     cmds:
     - |
       if test "${OPENWHISK_BUILDCONTAINER:-}" = "1"; then
@@ -330,22 +351,28 @@ tasks:
   buildx-all:local:
     cmds:
     - task: docker-setup
+    - task: docker-local-registry
     - task: ensure-openwhisk
     - task: build:scala
       vars:
-         ACT: "buildx"
+         ACT: "buildx-local"
+         DOCKER_REGISTRY: "{{.LOCAL_DOCKER_REGISTRY}}"
     - task: build:controller
       vars:
-         ACT: "buildx"
+         ACT: "buildx-local"
+         DOCKER_REGISTRY: "{{.LOCAL_DOCKER_REGISTRY}}"
     - task: build:invoker
       vars:
-         ACT: "buildx"
+         ACT: "buildx-local"
+         DOCKER_REGISTRY: "{{.LOCAL_DOCKER_REGISTRY}}"
     - task: build:scheduler
       vars:
-         ACT: "buildx"
+         ACT: "buildx-local"
+         DOCKER_REGISTRY: "{{.LOCAL_DOCKER_REGISTRY}}"
     - task: build:standalone
       vars:
-         ACT: "buildx"
+         ACT: "buildx-local"
+         DOCKER_REGISTRY: "{{.LOCAL_DOCKER_REGISTRY}}"
 
   build:
     desc: build local OpenWhisk images, update OPS root, load kind, and roll out controller
