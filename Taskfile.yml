@@ -316,6 +316,35 @@ tasks:
       vars:
          ACT: "build"
 
+  buildx-all:
+    desc: build multi-arch OpenWhisk images without pushing
+    cmds:
+    - |
+      if test "${OPENWHISK_BUILDCONTAINER:-}" = "1"; then
+        task buildx-all:local
+      else
+        printf '%s\n' 'mkdir -p /tmp/openserverless-docker-config && printf "{}\n" >/tmp/openserverless-docker-config/config.json && OPENWHISK_BUILDCONTAINER=1 DOCKER_CONFIG=/tmp/openserverless-docker-config TAG="{{.TAG}}" task buildx-all:local' | ops ide devcontainer
+      fi
+
+  buildx-all:local:
+    cmds:
+    - task: ensure-openwhisk
+    - task: build:scala
+      vars:
+         ACT: "buildx"
+    - task: build:controller
+      vars:
+         ACT: "buildx"
+    - task: build:invoker
+      vars:
+         ACT: "buildx"
+    - task: build:scheduler
+      vars:
+         ACT: "buildx"
+    - task: build:standalone
+      vars:
+         ACT: "buildx"
+
   build:
     desc: build local OpenWhisk images, update OPS root, load kind, and roll out controller
     cmds:
