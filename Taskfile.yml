@@ -52,7 +52,7 @@ vars:
     sh: echo "$HOME/.ops/0.1.0/olaris/opsroot.json"
   KIND_NODE: nuvolaris-control-plane
   KUBE_NAMESPACE: nuvolaris
-  DOCKER_REGISTRY: registry.hub.docker.com/apache
+  DOCKER_REGISTRY: docker.io/apache
   LOCAL_DOCKER_REGISTRY:
     sh: echo "${LOCAL_DOCKER_REGISTRY:-localhost:5000/apache}"
   LOCAL_REGISTRY_CONTAINER:
