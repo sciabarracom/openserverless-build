@@ -39,3 +39,4 @@ playground.*
 .DS_Store
 standalone/dist/openwhisk*
 standalone/dist/reports
+.devcontainer/
