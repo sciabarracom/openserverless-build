@@ -17,7 +17,7 @@
 #
 version: '3'
 
-dotenv: 
+dotenv:
   - .env
 
 vars:
@@ -76,8 +76,8 @@ tasks:
 
   default:
     - task --list-all
-  
-  setup: 
+
+  setup:
     silent: true
 
   ensure-openwhisk:
@@ -125,7 +125,7 @@ tasks:
     cmds:
       - ./gradlew  :core:scheduler:distTar
     status:
-      - test -f core/scheduler/build/distributions/scheduler.tar      
+      - test -f core/scheduler/build/distributions/scheduler.tar
 
   compile:standalone:
     dir: openwhisk
@@ -138,18 +138,18 @@ tasks:
 
   native:standalone-libs:
     deps:
-    - compile:standalone  
+    - compile:standalone
     dir: openwhisk
     cmds:
-      - ./gradlew core:standalone:copyRuntimeLibs    
+      - ./gradlew core:standalone:copyRuntimeLibs
 
   native:standalone-build:
     deps:
-    - native:standalone-libs   
+    - native:standalone-libs
     dir: openwhisk/core/standalone
     cmds:
     - native-image
-      --initialize-at-run-time=io.netty,akka.protobufv3.internal.UnsafeUtil      
+      --initialize-at-run-time=io.netty,akka.protobufv3.internal.UnsafeUtil
       --no-fallback --report-unsupported-elements-at-runtime
       --trace-object-instantiation=ch.qos.logback.classic.Logger
       --enable-url-protocols=http,https
@@ -157,7 +157,7 @@ tasks:
       -cp build/classes/scala/main:build/resources/main:build/dependency-libs/*
       -H:ConfigurationFileDirectories=$PWD/../../../standalone/graal-config
       -o $PWD/../../../standalone/dist/{{.EXEC_NAME}}
-      org.apache.openwhisk.standalone.StandaloneOpenWhisk      
+      org.apache.openwhisk.standalone.StandaloneOpenWhisk
     vars:
       EXEC_NAME: "${NATIVE_IMAGE_NAME:-openwhisk-standalone}"
 
@@ -170,14 +170,14 @@ tasks:
 
   native:standalone-config:
     deps:
-    - compile:standalone  
+    - compile:standalone
     dir: openwhisk/core/standalone
     cmds:
-    - java -agentlib:native-image-agent=config-output-dir=../../../standalone/graal-config      
-      -cp build/classes/scala/main:build/resources/main:build/dependency-libs/*      
+    - java -agentlib:native-image-agent=config-output-dir=../../../standalone/graal-config
+      -cp build/classes/scala/main:build/resources/main:build/dependency-libs/*
       -Dwhisk.standalone.host.name="0.0.0.0"
-      -Dwhisk.standalone.host.internal="$(hostname -f)"    
-      org.apache.openwhisk.standalone.StandaloneOpenWhisk 
+      -Dwhisk.standalone.host.internal="$(hostname -f)"
+      org.apache.openwhisk.standalone.StandaloneOpenWhisk
 
   clean:
     ignore_error: true
@@ -223,19 +223,19 @@ tasks:
       (build)
       docker build {{.DIR}} -t {{.IMG}} --build-arg BASE={{.BASE}}
       ;;
-      (buildx) 
+      (buildx)
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}}
       ;;
       (buildx-local)
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}} --push
       ;;
-      (buildx-push) 
-      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}} --push 
+      (buildx-push)
+      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}} --push
       ;;
       (*) echo ACT must be "build|buildx|buildx-local|buildx-push"
       esac
 
-  # this requires ACT IMG OPENWHISK_JAR and DIR parameters to be passed 
+  # this requires ACT IMG OPENWHISK_JAR and DIR parameters to be passed
   docker-build-standalone:
     silent: true
     cmds:
@@ -245,25 +245,25 @@ tasks:
       (build)
       docker build {{.DIR}} -t {{.IMG}} --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}}
       ;;
-      (buildx) 
+      (buildx)
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} -t {{.IMG}} {{.DIR}}
       ;;
       (buildx-local)
       docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} -t {{.IMG}} {{.DIR}} --push
       ;;
-      (buildx-push) 
-      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} -t {{.IMG}} {{.DIR}} --push 
+      (buildx-push)
+      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} --build-arg OPENWHISK_JAR={{.OPENWHISK_JAR}} -t {{.IMG}} {{.DIR}} --push
       ;;
       (*) echo ACT must be "build|buildx|buildx-local|buildx-push"
-      esac      
+      esac
 
   build:scala:
     cmds:
       - task: docker-build
         vars:
           DIR: openwhisk/common/scala
-          IMG: "{{.DOCKER_REGISTRY}}/{{.COMMON_IMAGE}}:{{.TAG}}"          
-          ACT: '{{.ACT}}'      
+          IMG: "{{.DOCKER_REGISTRY}}/{{.COMMON_IMAGE}}:{{.TAG}}"
+          ACT: '{{.ACT}}'
 
   build:controller:
     deps:
@@ -275,7 +275,7 @@ tasks:
           IMG: "{{.DOCKER_REGISTRY}}/${MY_CONTROLLER_IMAGE:-{{.CONTROLLER_IMAGE}}}:{{.TAG}}"
           ACT: '{{.ACT}}'
           BASE: "{{.DOCKER_REGISTRY}}/{{.COMMON_IMAGE}}:{{.TAG}}"
- 
+
   build:invoker:
     deps:
     - compile:invoker
@@ -296,8 +296,8 @@ tasks:
           DIR: openwhisk/core/scheduler
           IMG: "{{.DOCKER_REGISTRY}}/${MY_SCHEDULER_IMAGE:-{{.SCHEDULER_IMAGE}}}:{{.TAG}}"
           ACT: '{{.ACT}}'
-          BASE: "{{.DOCKER_REGISTRY}}/{{.COMMON_IMAGE}}:{{.TAG}}"          
-  
+          BASE: "{{.DOCKER_REGISTRY}}/{{.COMMON_IMAGE}}:{{.TAG}}"
+
   build:standalone:
     deps:
     - compile:standalone
@@ -309,14 +309,13 @@ tasks:
           ACT: '{{.ACT}}'
           BASE: "{{.DOCKER_REGISTRY}}/{{.COMMON_IMAGE}}:{{.TAG}}"
           OPENWHISK_JAR: "build/libs/openwhisk-standalone-1.0.0-SNAPSHOT.jar"
-  
+
   build-all:
     cmds:
     - |
       if test "${OPENWHISK_BUILDCONTAINER:-}" = "1"; then
         task build-all:local
       else
-        rm -Rvf .devcontainer
         printf '%s\n' 'mkdir -p /tmp/openserverless-docker-config && printf "{}\n" >/tmp/openserverless-docker-config/config.json && OPENWHISK_BUILDCONTAINER=1 DOCKER_CONFIG=/tmp/openserverless-docker-config TAG="{{.TAG}}" task build-all:local' | ops ide devcontainer
       fi
 
@@ -325,16 +324,16 @@ tasks:
     - task: ensure-openwhisk
     - task: build:scala
       vars:
-         ACT: "build" 
+         ACT: "build"
     - task: build:controller
       vars:
-         ACT: "build"      
+         ACT: "build"
     - task: build:invoker
       vars:
          ACT: "build"
     - task: build:scheduler
       vars:
-         ACT: "build"         
+         ACT: "build"
     - task: build:standalone
       vars:
          ACT: "build"
@@ -346,6 +345,9 @@ tasks:
       if test "${OPENWHISK_BUILDCONTAINER:-}" = "1"; then
         task buildx-all:local
       else
+        if docker ps | grep vsc-build
+        then docker rm -f $(docker ps | awk '/vsc-build/{print $1}')
+        fi
         printf '%s\n' 'mkdir -p /tmp/openserverless-docker-config && printf "{}\n" >/tmp/openserverless-docker-config/config.json && OPENWHISK_BUILDCONTAINER=1 DOCKER_CONFIG=/tmp/openserverless-docker-config TAG="{{.TAG}}" task buildx-all:local' | ops ide devcontainer
       fi
 
@@ -459,16 +461,16 @@ tasks:
     - task: docker-setup
     - task: build:scala
       vars:
-         ACT: "buildx-push" 
+         ACT: "buildx-push"
     - task: build:controller
       vars:
-         ACT: "buildx-push"      
+         ACT: "buildx-push"
     - task: build:invoker
       vars:
          ACT: "buildx-push"
     - task: build:scheduler
       vars:
-         ACT: "buildx-push"         
+         ACT: "buildx-push"
     - task: build:standalone
       vars:
          ACT: "buildx-push"
@@ -496,14 +498,14 @@ tasks:
        -p 3232:3232 -p 3233:3233
        -v /var/run/docker.sock:/var/run/docker.sock
        {{.DOCKER_REGISTRY}}/openwhisk2/standalone:{{.TAG}}
-    interactive: true   
+    interactive: true
 
   run:standalone:
     deps:
-    - native:standalone-libs 
+    - native:standalone-libs
     dir: openwhisk/core/standalone
     cmds:
-    - java -cp build/classes/scala/main:build/resources/main:build/dependency-libs/*      
+    - java -cp build/classes/scala/main:build/resources/main:build/dependency-libs/*
       -Dwhisk.standalone.host.name="0.0.0.0"
       -Dwhisk.standalone.host.internal="$(hostname -f)"
       org.apache.openwhisk.standalone.StandaloneOpenWhisk --no-browser
