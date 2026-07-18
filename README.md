@@ -31,10 +31,11 @@ You can put it at work with the following procedure
 
 1. clone everyting and open it in VSCode:
 ```
-git clone https://github.com/francescotimperi/openserverless-controller --recurse-submodules
-code nuvolaris
+git clone https://github.com/apache/openserverless-build
+code openserverless-build
 ```
 It will open and show a pop-up asking if you want to `Reopen in Container`. Click on it. 
+
 2. When it has finished, open the `workspace.code-workspace` file and then open the workspace (there will be a button to do that, click on it).
 3. Open the Metals plugin (click on the icon that looks like an 'm').
 To import the project, click on `New Scala Project` (but do not create any project actually) then `import build`. This will activate the Metals plugin, it will import all the subprojects and make available all the features of the plugin.
