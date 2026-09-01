@@ -50,8 +50,8 @@ vars:
       fi
   OPSROOT_JSON:
     sh: echo "$HOME/.ops/0.1.0/olaris/opsroot.json"
-  KIND_NODE: nuvolaris-control-plane
-  KUBE_NAMESPACE: nuvolaris
+  KIND_NODE: openserverless-control-plane
+  KUBE_NAMESPACE: openserverless
   DOCKER_REGISTRY: docker.io/apache
   LOCAL_DOCKER_REGISTRY:
     sh: echo "${LOCAL_DOCKER_REGISTRY:-localhost:5000/apache}"

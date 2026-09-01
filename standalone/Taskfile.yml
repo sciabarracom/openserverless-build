@@ -107,7 +107,7 @@ tasks:
        - name: {{.IMAGE}}
          newTag: {{.TAG}}
        resources:
-       - nuvolaris-ns.yaml
+       - openserverless-ns.yaml
        - standalone-roles.yaml
        - standalone-deploy.yaml
        - standalone-svc.yaml
@@ -133,5 +133,5 @@ tasks:
 
   list:
     cmds:
-      - kubectl -n nuvolaris get all
-      - kubectl -n nuvolaris get svc
+      - kubectl -n openserverless get all
+      - kubectl -n openserverless get svc
