@@ -135,7 +135,7 @@ function dockerImageExists(image: string): boolean {
 }
 
 function kindNode(): string {
-  return env("KIND_NODE", "nuvolaris-control-plane");
+  return env("KIND_NODE", "openserverless-control-plane");
 }
 
 function loadKind(): void {
@@ -154,7 +154,7 @@ function loadKind(): void {
 }
 
 function kubectlExists(kind: string, name: string): boolean {
-  const ns = env("KUBE_NAMESPACE", "nuvolaris");
+  const ns = env("KUBE_NAMESPACE", "openserverless");
   const proc = Bun.spawnSync(["kubectl", "-n", ns, "get", kind, name], {
     stdout: "ignore",
     stderr: "ignore",
@@ -163,7 +163,7 @@ function kubectlExists(kind: string, name: string): boolean {
 }
 
 function rollout(): void {
-  const ns = env("KUBE_NAMESPACE", "nuvolaris");
+  const ns = env("KUBE_NAMESPACE", "openserverless");
   const img = images();
 
   if (kubectlExists("statefulset", "controller")) {
@@ -198,7 +198,7 @@ function rollout(): void {
 }
 
 function status(): void {
-  const ns = env("KUBE_NAMESPACE", "nuvolaris");
+  const ns = env("KUBE_NAMESPACE", "openserverless");
   const img = images();
   console.log("expected images:");
   console.log(`  controller: ${img.controller}`);
@@ -237,8 +237,8 @@ Environment:
   TAG                 Image tag to use
   DOCKER_REGISTRY     Default: registry.hub.docker.com/apache
   OPSROOT_JSON        Default: ~/.ops/0.1.0/olaris/opsroot.json
-  KIND_NODE           Default: nuvolaris-control-plane
-  KUBE_NAMESPACE      Default: nuvolaris
+  KIND_NODE           Default: openserverless-control-plane
+  KUBE_NAMESPACE      Default: openserverless
 `);
 }
 

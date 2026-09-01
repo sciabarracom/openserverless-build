@@ -38,8 +38,8 @@ tasks:
     dir: openwhisk
     cmds:
       - ./gradlew distDocker
-      - kind load docker-image whisk/controller:latest --name=nuvolaris
-      - kind load docker-image whisk/invoker:latest --name=nuvolaris
+      - kind load docker-image whisk/controller:latest --name=openserverless
+      - kind load docker-image whisk/invoker:latest --name=openserverless
 
   devow-build:
     - docker build .devcontainer -t ghcr.io/nuvolaris/devow:{{.TAG}}
