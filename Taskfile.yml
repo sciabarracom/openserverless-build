@@ -22,6 +22,7 @@ dotenv:
 
 vars:
   BASETAG: 2.0.0-incubating
+  SUFFIX: "-SNAPSHOT"
   TAG:
     sh: |
       if test -n "${TAG:-}"; then
@@ -91,10 +92,34 @@ tasks:
           exit 1
         fi
 
+  # deprecated - use task tag
   image-tag:
-    - git tag -d $(git tag)
-    - git tag -f {{.BASETAG}}.$(date +%y%m%d%H%M){{.S}}
-    - task show
+    desc: "[deprecated] use task tag"
+    silent: true
+    cmds:
+      - 'echo "deprecated, use task tag"'
+
+  tag:
+    desc: |
+      Create a new snapshot tag for the current git commit.
+      NOTE: this deletes the existing local tags first - snapshot tags are disposable.
+    silent: true
+    vars:
+      TS:
+        sh: date '+%y %m %d %H %M' | awk '{printf "%s%s%d%s%d\n", $1, substr("abcdefghijkl",$2+0,1), $3, substr("abcdefghijklmnopqrstuvwx",$4+1,1), $5}'
+    cmds:
+      - git tag -d $(git tag) 2>/dev/null || true
+      - |
+        TAG="{{.BASETAG}}.{{.TS}}{{.SUFFIX}}"
+        git tag -f $TAG
+        echo New tag $TAG
+
+  ci:
+    desc: |
+      Push the tags, starting the GitHub Actions build on the repo that received them.
+      This does not build anything locally.
+    cmds:
+      - git push --tags --force
 
   show:
     silent: true
@@ -103,7 +128,7 @@ tasks:
       - echo "scala:" {{.COMMON_IMAGE}}:{{.TAG}}
       - echo "controller:" ${MY_CONTROLLER_IMAGE:-{{.CONTROLLER_IMAGE}}}:{{.TAG}}
       - echo "invoker:" ${MY_INVOKER_IMAGE:-{{.INVOKER_IMAGE}}}:{{.TAG}}
-      - echo "scheduler:" ${MY_SCHEDULER_IMAGE:-{{.INVOKER_IMAGE}}}:{{.TAG}}
+      - echo "scheduler:" ${MY_SCHEDULER_IMAGE:-{{.SCHEDULER_IMAGE}}}:{{.TAG}}
       - echo "standalone:" ${MY_STANDALONE_IMAGE:-{{.STANDALONE_IMAGE}}}:{{.TAG}}
 
   compile:controller:
