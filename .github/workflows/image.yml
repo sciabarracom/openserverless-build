@@ -33,10 +33,41 @@ jobs:
       contents: write
       packages: write
     steps:
-      - name: Remove unnecessary files
+      - name: Check GHCR_TOKEN is set
+        if: ${{ github.repository_owner != 'apache' }}
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"    
+          if [ -z "$GHCR_TOKEN" ]; then
+            {
+              echo "## Missing required secret: GHCR_TOKEN"
+              echo
+              echo "This repository publishes multiple images whose names do not"
+              echo "match the repository (openwhisk2/controller, invoker,"
+              echo "scheduler, standalone, scala). The built-in GITHUB_TOKEN only"
+              echo "has write access to packages owned by this repository, so it"
+              echo "cannot push them: the push would fail with"
+              echo '`denied: permission_denied: write_package`.'
+              echo
+              echo "To fix this, create a Personal Access Token and add it as a secret:"
+              echo
+              echo "1. Go to https://github.com/settings/tokens"
+              echo "   -> Generate new token (classic)"
+              echo "2. Select the **write:packages** scope"
+              echo "3. Copy the generated token"
+              echo "4. In this repository go to"
+              echo "   Settings -> Secrets and variables -> Actions -> New repository secret"
+              echo "5. Name it exactly **GHCR_TOKEN** and paste the token as the value"
+              echo
+              echo "Then re-run this workflow. See BUILD.md section 2.6 for details."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Missing GHCR_TOKEN::This repository publishes multiple images and needs a PAT with write:packages stored as the secret GHCR_TOKEN. See the job summary or BUILD.md section 2.6 for step-by-step instructions."
+            exit 1
+          fi
+      #- name: Remove unnecessary files
+      #  run: |
+      #    sudo rm -rf /usr/share/dotnet
+      #    sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -47,7 +78,7 @@ jobs:
       - name: License
         uses: apache/skywalking-eyes@v0.9.0
       - name: Setup CI
-        run: bash .github/cisetup.sh                   
+        run: bash .github/cisetup.sh
       # Manual run: create a new snapshot tag on the current HEAD and push it.
       # The push of the tag does not start another run (GITHUB_TOKEN pushes do
       # not trigger workflows), so this same run goes on and builds it.
@@ -62,30 +93,30 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'        
-      - name: Assign TAG from pull request
-        if:  ${{ github.event_name == 'pull_request' }}
-        run: |
-          echo "IMG_TAG=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          java-version: '17'
       - name: Assign TAG from push
-        if:  ${{ github.event_name != 'pull_request' }}
-        run: |
-          echo "IMG_TAG=$(git describe --tags --abbrev=0)" >> "$GITHUB_ENV"
+        run: echo "IMG_TAG=$(git describe --tags --abbrev=0)" >> "$GITHUB_ENV"
       - name: Use ghcr.io repo
         if:  ${{ github.repository_owner != 'apache'}}
         run: |
           echo "REPO_URL=ghcr.io" >> "$GITHUB_ENV"
           echo "DOCKER_REGISTRY=ghcr.io/${{ github.repository_owner }}" >> "$GITHUB_ENV"
-      - name: Use registry.hub.docker.com
+      - name: Use docker.io
         if:  ${{ github.repository_owner == 'apache'}}
         run: |
-          echo "REPO_URL=registry.hub.docker.com" >> "$GITHUB_ENV"
-          echo "DOCKER_REGISTRY=registry.hub.docker.com/apache" >> "$GITHUB_ENV"         
+          echo "REPO_URL=docker.io" >> "$GITHUB_ENV"
+          echo "DOCKER_REGISTRY=docker.io/apache" >> "$GITHUB_ENV"
+      # This repository publishes MULTIPLE images (openwhisk2/controller,
+      # invoker, scheduler, standalone, scala) whose names do not match the
+      # repository. GHCR grants the built-in GITHUB_TOKEN write access only to
+      # packages owned by the repository running the workflow, so it cannot
+      # create or update these. A PAT with write:packages is required instead.
+      # Fail fast with instructions rather than after a long build.
       - name: Select registry credentials
         run: |
           if [ "${REPO_URL%%/*}" = "ghcr.io" ]; then
             echo "REGISTRY_USER=${{ github.actor }}" >> "$GITHUB_ENV"
-            echo "REGISTRY_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> "$GITHUB_ENV"
+            echo "REGISTRY_TOKEN=${{ secrets.GHCR_TOKEN }}" >> "$GITHUB_ENV"
           else
             echo "REGISTRY_USER=${{ secrets.DOCKERHUB_USER }}" >> "$GITHUB_ENV"
             echo "REGISTRY_TOKEN=${{ secrets.DOCKERHUB_TOKEN }}" >> "$GITHUB_ENV"
