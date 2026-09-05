@@ -119,7 +119,7 @@ tasks:
       Push the tags, starting the GitHub Actions build on the repo that received them.
       This does not build anything locally.
     cmds:
-      - git push --tags --force
+      - git push --tags
 
   show:
     silent: true
