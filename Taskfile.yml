@@ -21,7 +21,7 @@ dotenv:
   - .env
 
 vars:
-  BASETAG: 2.0.0-incubating
+  BASETAG: 0.9.0-incubating
   SUFFIX: "-SNAPSHOT"
   TAG:
     sh: |
