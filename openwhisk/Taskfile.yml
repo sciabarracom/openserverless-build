@@ -22,7 +22,7 @@ vars:
   TAG:
     sh: git describe --tags --abbrev=0 2>/dev/null || echo "no-tag"
   TIMESTAMP:
-    sh: date +%y%m%d%H
+    sh: date +%y%m%d%H%M
   S: ""
   T: "all"
 
